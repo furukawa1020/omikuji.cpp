@@ -1,0 +1,103 @@
+#include <iostream>
+#include <vector>
+#include <thread>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
+
+using namespace std;
+using namespace chrono;
+
+void sleep(int ms) {
+    this_thread::sleep_for(milliseconds(ms));
+}
+
+void clear() {
+    cout << "\033[2J\033[1;1H";
+}
+
+void beep() {
+    cout << "\a" << flush;
+}
+
+// ゲーミング文字（色が流れる）
+void rainbow(const string& text) {
+    vector<int> colors = {31, 33, 32, 36, 34, 35};
+    for (int i = 0; i < text.size(); i++) {
+        cout << "\033[1;" << colors[i % colors.size()] << "m"
+             << text[i] << "\033[0m";
+        sleep(20);
+    }
+    cout << endl;
+}
+
+int main() {
+    srand(time(nullptr));
+
+    clear();
+    cout << "起動中";
+    for (int i = 0; i < 5; i++) {
+        cout << ".";
+        beep();
+        cout.flush();
+        sleep(300);
+    }
+
+    clear();
+
+    cout << R"(
+        ⛩  ⛩  ⛩
+      ───────────
+        年 越 神 社
+      ───────────
+    )" << endl;
+
+    sleep(800);
+    cout << "おみくじ箱を振っています" << endl;
+
+    vector<string> drum = {"◐", "◓", "◑", "◒"};
+    for (int i = 0; i < 25; i++) {
+        cout << "\r\033[1;36m" << drum[i % drum.size()]
+             << " ガラガラ…\033[0m" << flush;
+        beep();
+        sleep(100);
+    }
+
+    struct Omikuji {
+        string name;
+        string message;
+        int exit_code;
+    };
+
+    vector<Omikuji> fortunes = {
+        {"大吉", "世界はまだまだ面白くなる", 0},
+        {"超吉", "全部つながって後で効く", 0},
+        {"神吉", "今年は当たり年確定", 0},
+        {"覇吉", "調子に乗ってよい", 0},
+        {"強吉", "進め。止まる理由なし", 0},
+        {"凶",   "今日は無理するな。寝ろ", 1}
+    };
+
+    Omikuji result = fortunes[rand() % fortunes.size()];
+
+    clear();
+
+    cout << "━━━━━━━━━━━━━━━━━━━" << endl;
+    rainbow("🎍  お み く じ  🎍");
+    cout << "━━━━━━━━━━━━━━━━━━━" << endl << endl;
+
+    cout << "\033[1;33m運勢：【 " << result.name << " 】\033[0m\n\n";
+    rainbow(result.message);
+
+    if (result.name != "凶") {
+        cout << "\n\033[1;32m✨✨✨ BLESSING ✨✨✨\033[0m\n";
+        for (int i = 0; i < 5; i++) beep();
+    } else {
+        cout << "\n\033[1;31m⚠ SYSTEM WARNING ⚠\033[0m\n";
+    }
+
+    cout << "\n引いた時刻: " << time(nullptr) << endl;
+    cout << "━━━━━━━━━━━━━━━━━━━" << endl;
+
+    return result.exit_code;
+}
