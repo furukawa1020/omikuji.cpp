@@ -1,0 +1,163 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <thread>
+#include <chrono>
+#include <ctime>
+#include <cstdlib>
+#include <algorithm>
+
+using namespace std;
+using namespace chrono;
+
+void sleep_ms(int ms){ this_thread::sleep_for(milliseconds(ms)); }
+void clear(){ cout << "\033[2J\033[1;1H"; }
+void beep(){ cout << "\a" << flush; }
+
+string color(int code){ return "\033[1;" + to_string(code) + "m"; }
+string reset(){ return "\033[0m"; }
+
+// レインボー文字（ゲーミング）
+void rainbow_print(const string& s, int delay=8){
+    vector<int> cols = {31,33,32,36,34,35};
+    for (int i=0;i<(int)s.size();i++){
+        cout << "\033[1;" << cols[i % (int)cols.size()] << "m" << s[i] << "\033[0m";
+        if(delay>0) sleep_ms(delay);
+    }
+    cout << "\n";
+}
+
+void progress(const string& label, int steps, int ms){
+    vector<string> spin = {"⠋","⠙","⠹","⠸","⠼","⠴","⠦","⠧","⠇","⠏"};
+    for(int i=0;i<steps;i++){
+        cout << "\r" << color(36) << spin[i % (int)spin.size()] << reset()
+             << " " << label << " " << color(35) << "◆" << reset() << flush;
+        if(i%3==0) beep();
+        sleep_ms(ms);
+    }
+    cout << "\r" << string(40,' ') << "\r";
+}
+
+struct Fortune{
+    string tier;     // レア度
+    string name;     // 結果名
+    string msg;      // 一言
+    int weight;      // 出現確率（相対）
+};
+
+int pick_index_by_weight(const vector<Fortune>& pool){
+    int sum=0; for(auto& f: pool) sum += f.weight;
+    int r = rand() % sum;
+    int acc=0;
+    for(int i=0;i<(int)pool.size();i++){
+        acc += pool[i].weight;
+        if(r < acc) return i;
+    }
+    return (int)pool.size()-1;
+}
+
+string tier_color(const string& tier){
+    if(tier=="UR") return color(35);
+    if(tier=="SSR") return color(33);
+    if(tier=="SR") return color(36);
+    if(tier=="R")  return color(32);
+    return color(37);
+}
+
+int main(){
+    srand((unsigned)time(nullptr));
+
+    // 10連プール（好きに改造してOK）
+    vector<Fortune> pool = {
+        {"UR",  "神吉", "今年、勝ち筋しかない",  2},
+        {"UR",  "覇吉", "強い。回せ。進め。",    3},
+        {"SSR", "超吉", "全部つながって後で効く", 8},
+        {"SSR", "大吉", "世界はまだまだ面白くなる", 10},
+        {"SR",  "強吉", "迷っても前進してる",   18},
+        {"SR",  "祝吉", "生存してるだけで優勝", 18},
+        {"R",   "中吉", "縁が後から効いてくる", 25},
+        {"R",   "小吉", "ちゃんと積み上がる",   28},
+        {"N",   "吉",   "思ったより悪くない",   35},
+        {"N",   "末吉", "来年に遅延実行される",  30}
+        // 凶を入れたいならここに追加してweight調整
+    };
+
+    clear();
+    rainbow_print("🎍 Cpp神社 10連おみくじガチャ 🎍", 6);
+    cout << "\n";
+    cout << "Enterで10連（押して）: ";
+    cin.get();
+
+    clear();
+    cout << R"(
+        ⛩  ⛩  ⛩
+      ───────────
+        C++  神 社
+      ───────────
+    )" << "\n";
+
+    progress("おみくじ箱をゲーミングに振っています…", 55, 55);
+
+    clear();
+    rainbow_print("🎰 10連 いきます 🎰", 8);
+    cout << "\n";
+
+    vector<int> counts(pool.size(), 0);
+    vector<int> picked(10);
+
+    for(int i=0;i<10;i++){
+        progress("抽選中", 22, 35);
+
+        int idx = pick_index_by_weight(pool);
+        picked[i]=idx;
+        counts[idx]++;
+
+        // 1枠ずつド派手に出す
+        auto &f = pool[idx];
+        string c = tier_color(f.tier);
+
+        cout << c << "【" << f.tier << "】 " << f.name << reset()
+             << "  - " << f.msg << "\n";
+
+        // レアは音多め
+        if(f.tier=="UR"){ for(int k=0;k<6;k++){ beep(); sleep_ms(40);} }
+        else if(f.tier=="SSR"){ for(int k=0;k<3;k++){ beep(); sleep_ms(60);} }
+        else { beep(); }
+
+        sleep_ms(120);
+    }
+
+    // サマリ
+    cout << "\n";
+    cout << "━━━━━━━━━━━━━━━━━━━\n";
+    rainbow_print("📊 10連サマリ", 0);
+    cout << "━━━━━━━━━━━━━━━━━━━\n";
+
+    int ur=0, ssr=0;
+    for(int i=0;i<(int)pool.size();i++){
+        if(counts[i]==0) continue;
+        if(pool[i].tier=="UR") ur += counts[i];
+        if(pool[i].tier=="SSR") ssr += counts[i];
+
+        cout << tier_color(pool[i].tier)
+             << pool[i].tier << reset()
+             << " " << pool[i].name
+             << " ×" << counts[i] << "\n";
+    }
+
+    cout << "\n";
+    if(ur>=1){
+        cout << color(35) << "✨ UR出た。今日は勝ち。" << reset() << "\n";
+    }else if(ssr>=2){
+        cout << color(33) << "✨ SSR複数。上振れ。" << reset() << "\n";
+    }else if(ssr>=1){
+        cout << color(33) << "✨ SSRあり。十分。" << reset() << "\n";
+    }else{
+        cout << color(36) << "✨ レアは…来年に遅延実行される。" << reset() << "\n";
+    }
+
+    cout << "引いた時刻: " << time(nullptr) << "\n";
+    cout << "━━━━━━━━━━━━━━━━━━━\n";
+
+    return 0;
+}
